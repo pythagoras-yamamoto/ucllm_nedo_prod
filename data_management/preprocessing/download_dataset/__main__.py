@@ -38,7 +38,7 @@ def main():
     elif args.dataset == "redpajama_v2":
         redpajama_v2.download_dataset(snapshot=args.snapshot, language=args.language, partition=args.partition, output_base=args.output_base)
     elif args.dataset == "culturaX":
-        culturaX.download_dataset(split=args.split, index_from=args.index_from,
+        culturaX.download_dataset(language=args.language, index_from=args.index_from,
                             index_to=args.index_to, output_base=args.output_base)
 
 

@@ -6,31 +6,28 @@ import json
 import pandas as pd
 
 
-def __download_config(split: str, index_from: int, index_to: int) -> dict[str, str]:
-    if split == "train":
-        if index_to > 1024:
-            raise ValueError("index_to must be less than or equal to 1024")
-        filebase = "ja_part_{index}.parquet"
-        output_file = "ja_part_{index_from}-{index_to}.jsonl".format(
-            index_from=str(index_from).zfill(5), index_to=str(index_to).zfill(5))
+def __download_config(language: str, index_from: int, index_to: int) -> dict[str, str]:
+    if index_to > 1024:
+        raise ValueError("index_to must be less than or equal to 1024")
+    filebase = "{language}_part_{index}.parquet"
+    output_file = "{language}_part_{index_from}-{index_to}.jsonl".format(language=language, 
+        index_from=str(index_from).zfill(5), index_to=str(index_to).zfill(5))
     return {"filebase": filebase, "output_file": output_file}
 
 
-def __execute_download(download_file: str, output_file_path: str, dataset_root: str) -> None:
+def __execute_download(language: str, download_file: str, output_file_path: str, dataset_root: str) -> None:
     logging.info(f"Downloading {dataset_root}/{download_file}")
 
     current_dir = os.getcwd()
 
     # Change directory in order to use git lfs
     os.chdir(dataset_root)
-    subprocess.run(["git", "lfs", "pull", "--include", f"ja/{download_file}"], check=True)
+    subprocess.run(["git", "lfs", "pull", "--include", f"{language}/{download_file}"], check=True)
     os.chdir(current_dir)
 
     logging.info(f"Saving to {output_file_path}")
 
-    # ここ言語ごとに切り替えられるように変更
-    df = pd.read_parquet(f"{dataset_root}/ja/{download_file}")
-    
+    df = pd.read_parquet(f"{dataset_root}/{language}/{download_file}")
     with open(output_file_path, 'a', encoding='utf-8') as output_file:
         for i, row in df.iterrows():
             try:
@@ -41,7 +38,7 @@ def __execute_download(download_file: str, output_file_path: str, dataset_root: 
                 logging.info(f"Failed to convert row {i} to JSON: {e}")
 
 
-def download_dataset(split: str, output_base: str = "output", index_from: int = 0, index_to: int = 0) -> None:
+def download_dataset(language: str,  output_base: str = "output", index_from: int = 0, index_to: int = 0) -> None:
     """Download the specified C4 dataset from Hugging Face."""
     if index_from < 0:
         raise ValueError("index_from must be greater than or equal to 0")
@@ -72,13 +69,12 @@ def download_dataset(split: str, output_base: str = "output", index_from: int = 
             [f"git lfs install"], shell=True)
     os.chdir(current_dir)
 
-    config = __download_config(split=split, index_from=index_from, index_to=index_to)
+    config = __download_config(language=language, index_from=index_from, index_to=index_to)
 
     output_file_path = os.path.join(output_path, config["output_file"])
     if os.path.exists(output_file_path):
         os.remove(output_file_path)
     for i in range(index_from, index_to+1):
-        filename = config["filebase"].format(index=str(i).zfill(5))
-        print('FILENAME',filename)
-        __execute_download(download_file=filename,
+        filename = config["filebase"].format(language=language, index=str(i).zfill(5))
+        __execute_download(language=language, download_file=filename,
                            output_file_path=output_file_path, dataset_root=dataset_root)
